@@ -28,17 +28,24 @@ HTML = r"""<!DOCTYPE html>
 <meta charset="utf-8">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body { background: transparent; }
+  html, body { background: transparent; height: 100%; margin: 0; }
   body {
     color: #e6e6e6;
     font-family: 'Inter', 'Ubuntu', 'DejaVu Sans', sans-serif;
     padding: 0;
+    overflow: hidden;
   }
   .card {
     background: transparent;
     padding: 18px 20px;
     width: 300px;
+    max-height: 100vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
   }
+  .card::-webkit-scrollbar { width: 6px; }
+  .card::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
   .money, .row b, .traffic b { text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
   .title { font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; color: #777; margin-bottom: 10px; }
   .money { font-size: 34px; font-weight: 300; line-height: 1; margin-bottom: 2px; }
@@ -47,7 +54,8 @@ HTML = r"""<!DOCTYPE html>
   .row { display: flex; justify-content: space-between; font-size: 12px; color: #999; margin-top: 4px; }
   .row b { color: #e6e6e6; font-weight: 500; }
   .traffic, .shipped { margin-top: 8px; font-size: 12px; color: #999; }
-  .repos { margin-top: 8px; font-size: 11px; color: #777; }
+  .repos { margin-top: 8px; font-size: 11px; color: #777; list-style: disc; padding-left: 16px; }
+  .repos li { margin-top: 2px; }
   .traffic b, .shipped b { color: #e6e6e6; font-weight: 500; }
   .delta { font-size: 11px; margin-left: 6px; }
   .delta.pos { color: #4ade80; }
@@ -64,7 +72,7 @@ HTML = r"""<!DOCTYPE html>
     <div class="row"><span>pending</span><b id="pending">0</b></div>
     <div class="shipped">Shipped <b id="shipped">0</b> <span id="shippedDelta" class="delta">0</span></div>
     <div class="traffic">Traffic <b id="views">0</b> views · <b id="visitors">0</b> visitors <span id="trafficDelta" class="delta">0</span></div>
-    <div class="repos" id="repos">—</div>
+    <ul class="repos" id="repos"></ul>
     <div class="updated" id="updated">Updated …</div>
   </div>
   <script>
@@ -91,9 +99,19 @@ HTML = r"""<!DOCTYPE html>
       const tv = (t.today_views||0)-(t.yesterday_views||0);
       setDelta('trafficDelta', tv);
       const repos = d.repos || [];
-      document.getElementById('repos').textContent = repos.length
-        ? 'Recent: ' + repos.map(r => r.name).join(' · ')
-        : 'Recent: —';
+      const ul = document.getElementById('repos');
+      ul.innerHTML = '';
+      if (!repos.length) {
+        const li = document.createElement('li');
+        li.textContent = '—';
+        ul.appendChild(li);
+      } else {
+        repos.forEach(r => {
+          const li = document.createElement('li');
+          li.textContent = r.name;
+          ul.appendChild(li);
+        });
+      }
       document.getElementById('updated').textContent = d.updated_text || '';
     }
   </script>
