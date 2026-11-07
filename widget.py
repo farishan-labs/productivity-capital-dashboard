@@ -10,9 +10,11 @@ is pushed to the page every REFRESH_SEC seconds.
 
 Date format: "Updated 1 minute ago (7 Nov, 22:01)"
 """
-import json, os, warnings
+import json, os, sys, warnings
 warnings.filterwarnings("ignore")
 from datetime import datetime, timezone
+
+INTERACTIVE = os.environ.get("INTERACTIVE", "").lower() in ("1", "true", "yes") or "--interactive" in sys.argv
 
 import gi
 gi.require_version("Gtk", "3.0")
@@ -35,12 +37,13 @@ HTML = r"""<!DOCTYPE html>
     padding: 0;
     overflow: hidden;
   }
+  body.interactive .card { overflow-y: auto; }
   .card {
     background: transparent;
     padding: 18px 20px;
     width: 300px;
     max-height: 100vh;
-    overflow-y: auto;
+    overflow-y: hidden;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.15) transparent;
   }
@@ -64,7 +67,7 @@ HTML = r"""<!DOCTYPE html>
   .updated { margin-top: 12px; font-size: 10px; color: #555; }
 </style>
 </head>
-<body>
+<body class="INTERACTIVE_PLACEHOLDER">
   <div class="card">
     <div class="title">Productivity Capital</div>
     <div class="hdr">Today vs Yday</div>
@@ -118,6 +121,7 @@ HTML = r"""<!DOCTYPE html>
 </body>
 </html>
 """
+HTML = HTML.replace("INTERACTIVE_PLACEHOLDER", "interactive" if INTERACTIVE else "")
 
 
 def load_data():
@@ -158,7 +162,7 @@ def build_payload():
 class CapitalDashboard(Gtk.Window):
     def __init__(self):
         super().__init__(title="Productivity Capital")
-        self.set_default_size(300, 230)
+        self.set_default_size(300, 290)
         self.set_position(Gtk.WindowPosition.CENTER)
 
         # transparency
@@ -174,7 +178,8 @@ class CapitalDashboard(Gtk.Window):
         self.set_skip_taskbar_hint(True)
         self.set_skip_pager_hint(True)
         self.stick()
-        self.set_accept_focus(False)
+        self.set_accept_focus(INTERACTIVE)
+        self.interactive = INTERACTIVE
 
         self.webview = WebKit2.WebView()
         settings = self.webview.get_settings()
@@ -196,7 +201,23 @@ class CapitalDashboard(Gtk.Window):
 
     def _on_realize(self, _w):
         self.set_keep_below(True)
+        self._apply_interactivity()
         self._center()
+
+    def _apply_interactivity(self):
+        try:
+            win = self.get_window()
+            if win is None:
+                return
+            if self.interactive:
+                import cairo
+                r = cairo.Region(cairo.RectangleInt(0, 0, 300, 300))
+                win.input_shape_combine_region(r, 0, 0)
+            else:
+                import cairo
+                win.input_shape_combine_region(cairo.Region(), 0, 0)
+        except Exception:
+            pass
 
     def _on_load_changed(self, _wv, event):
         if event == WebKit2.LoadEvent.FINISHED and not self._loaded:
@@ -215,7 +236,7 @@ class CapitalDashboard(Gtk.Window):
                 mon = screen.get_primary_monitor()
                 geom = screen.get_monitor_geometry(mon)
             x = geom.x + (geom.width - 300) // 2
-            y = geom.y + (geom.height - 230) // 2
+            y = geom.y + (geom.height - 290) // 2
             self.move(x, y)
         except Exception:
             pass
