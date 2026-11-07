@@ -26,9 +26,11 @@ productivity-capital-restart
 
 (or `./restart.sh` from the project dir). Refreshes shipped count from git activity across `~/dev`, then kills any running instance and launches a fresh one.
 
-## Shipped (auto)
+## Shipped + Recent repos (auto)
 
-`sync_shipped.py` counts git commits today/yesterday across `~/dev` and writes to `capital.json`. Run manually or via `restart.sh`/cron.
+`sync_shipped.py` counts git commits today/yesterday across `~/dev` and writes
+`shipped` + `repos` (top 3 most recently updated) to `capital.json`. Run manually
+or via `restart.sh`/cron.
 
 ## Update data (used by agents / workflows)
 

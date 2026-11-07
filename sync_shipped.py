@@ -44,6 +44,18 @@ def count_commits(repo, since, until):
     except Exception:
         return 0
 
+def last_commit_iso(repo):
+    try:
+        out = subprocess.run(
+            ["git", "-C", repo, "log", "-1", "--format=%cI"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if out.returncode != 0:
+            return None
+        return out.stdout.strip() or None
+    except Exception:
+        return None
+
 def main():
     now = datetime.datetime.now()
     today = now.date()
@@ -54,14 +66,18 @@ def main():
     since_yest = yesterday.isoformat() + "T00:00:00"
     until_yest = today.isoformat() + "T00:00:00"
 
-    repos = find_repos(ROOT)
-    # de-dupe
-    repos = sorted(set(repos))
+    repos = sorted(set(find_repos(ROOT)))
     today_n = 0
     yest_n = 0
+    recent = []
     for r in repos:
         today_n += count_commits(r, since_today, until_today)
         yest_n += count_commits(r, since_yest, until_yest)
+        iso = last_commit_iso(r)
+        if iso:
+            recent.append((iso, os.path.basename(r), r))
+    recent.sort(reverse=True)
+    top3 = [{"name": name, "when": iso} for iso, name, _ in recent[:3]]
 
     # update capital.json
     try:
@@ -72,11 +88,12 @@ def main():
     s = d.setdefault("shipped", {})
     s["today"] = today_n
     s["yesterday"] = yest_n
+    d["repos"] = top3
     d["updated_at"] = datetime.datetime.now().isoformat(timespec="seconds")
     os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
     with open(DATA_FILE, "w") as f:
         json.dump(d, f, indent=2)
-    print(f"repos={len(repos)} shipped today={today_n} yesterday={yest_n}")
+    print(f"repos={len(repos)} shipped today={today_n} yesterday={yest_n} top3={[r['name'] for r in top3]}")
 
 if __name__ == "__main__":
     main()

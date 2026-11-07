@@ -47,6 +47,7 @@ HTML = r"""<!DOCTYPE html>
   .row { display: flex; justify-content: space-between; font-size: 12px; color: #999; margin-top: 4px; }
   .row b { color: #e6e6e6; font-weight: 500; }
   .traffic, .shipped { margin-top: 8px; font-size: 12px; color: #999; }
+  .repos { margin-top: 8px; font-size: 11px; color: #777; }
   .traffic b, .shipped b { color: #e6e6e6; font-weight: 500; }
   .delta { font-size: 11px; margin-left: 6px; }
   .delta.pos { color: #4ade80; }
@@ -63,6 +64,7 @@ HTML = r"""<!DOCTYPE html>
     <div class="row"><span>pending</span><b id="pending">0</b></div>
     <div class="shipped">Shipped <b id="shipped">0</b> <span id="shippedDelta" class="delta">0</span></div>
     <div class="traffic">Traffic <b id="views">0</b> views · <b id="visitors">0</b> visitors <span id="trafficDelta" class="delta">0</span></div>
+    <div class="repos" id="repos">—</div>
     <div class="updated" id="updated">Updated …</div>
   </div>
   <script>
@@ -88,6 +90,10 @@ HTML = r"""<!DOCTYPE html>
       document.getElementById('visitors').textContent = fmt(t.today_visitors || 0);
       const tv = (t.today_views||0)-(t.yesterday_views||0);
       setDelta('trafficDelta', tv);
+      const repos = d.repos || [];
+      document.getElementById('repos').textContent = repos.length
+        ? 'Recent: ' + repos.map(r => r.name).join(' · ')
+        : 'Recent: —';
       document.getElementById('updated').textContent = d.updated_text || '';
     }
   </script>
@@ -126,6 +132,7 @@ def build_payload():
         "money": d.get("money", {}),
         "traffic": d.get("traffic", {}),
         "shipped": d.get("shipped", {}),
+        "repos": d.get("repos", []),
         "updated_text": format_updated(d),
     }
 
