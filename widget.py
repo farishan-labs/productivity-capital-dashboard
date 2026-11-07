@@ -74,7 +74,8 @@ HTML = r"""<!DOCTYPE html>
     <div class="money"><span id="today">0</span> <span class="cur" id="cur">IDR</span> <span id="moneyDelta" class="delta">0</span></div>
     <div class="row"><span>pending</span><b id="pending">0</b></div>
     <div class="shipped">Shipped <b id="shipped">0</b> <span id="shippedDelta" class="delta">0</span></div>
-    <div class="traffic">Traffic <b id="views">0</b> views · <b id="visitors">0</b> visitors <span id="trafficDelta" class="delta">0</span></div>
+    <div class="traffic">farishan.com <b id="viewsFc">0</b> views <span id="deltaFc" class="delta">0</span></div>
+    <div class="traffic">han.farishan.com <b id="viewsHan">0</b> views <span id="deltaHan" class="delta">0</span></div>
     <ul class="repos" id="repos"></ul>
     <div class="updated" id="updated">Updated …</div>
   </div>
@@ -97,10 +98,13 @@ HTML = r"""<!DOCTYPE html>
       document.getElementById('pending').textContent = fmt(m.pending || 0);
       document.getElementById('shipped').textContent = fmt(s.today || 0);
       setDelta('shippedDelta', (s.today||0)-(s.yesterday||0));
-      document.getElementById('views').textContent = fmt(t.today_views || 0);
-      document.getElementById('visitors').textContent = fmt(t.today_visitors || 0);
-      const tv = (t.today_views||0)-(t.yesterday_views||0);
-      setDelta('trafficDelta', tv);
+      const sites = t.sites || {};
+      const fc = sites['farishan.com'] || {};
+      const han = sites['han.farishan.com'] || {};
+      document.getElementById('viewsFc').textContent = fmt(fc.today_views || 0);
+      document.getElementById('viewsHan').textContent = fmt(han.today_views || 0);
+      setDelta('deltaFc', (fc.today_views||0)-(fc.yesterday_views||0));
+      setDelta('deltaHan', (han.today_views||0)-(han.yesterday_views||0));
       const repos = d.repos || [];
       const ul = document.getElementById('repos');
       ul.innerHTML = '';

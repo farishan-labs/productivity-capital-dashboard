@@ -54,7 +54,7 @@ cat > ~/.config/autostart/productivity-capital.desktop <<EOF
 [Desktop Entry]
 Type=Application
 Name=Productivity Capital
-Exec=/usr/bin/python3 $HOME/dev/personal/productivity-capital-dashboard/widget.py
+Exec=/usr/bin/python3 $HOME/dev/productivity-capital-dashboard/widget.py
 X-GNOME-Autostart-enabled=true
 EOF
 ```
