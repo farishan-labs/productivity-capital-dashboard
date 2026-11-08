@@ -207,6 +207,11 @@ class CapitalDashboard(Gtk.Window):
         self.set_keep_below(True)
         self._apply_interactivity()
         self._center()
+        # Re-raise above other desktop-layer windows (e.g. GNOME's desktop-icons
+        # layer, which may map after this widget at login) while staying below
+        # normal windows thanks to _NET_WM_STATE_BELOW.
+        GLib.timeout_add(500, self._raise_window)
+        GLib.timeout_add(2000, self._raise_window)
 
     def _apply_interactivity(self):
         try:
@@ -246,7 +251,26 @@ class CapitalDashboard(Gtk.Window):
             pass
         return False
 
+    def _raise_window(self):
+        try:
+            import ctypes
+            X11 = ctypes.CDLL("libX11.so.6")
+            X11.XOpenDisplay.restype = ctypes.c_void_p
+            X11.XOpenDisplay.argtypes = [ctypes.c_char_p]
+            X11.XRaiseWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
+            X11.XFlush.argtypes = [ctypes.c_void_p]
+            d = X11.XOpenDisplay(None)
+            if d:
+                win = self.get_window()
+                if win is not None:
+                    X11.XRaiseWindow(d, ctypes.c_ulong(win.get_xid()))
+                    X11.XFlush(d)
+        except Exception:
+            pass
+        return False
+
     def _tick(self):
+        self._raise_window()
         self._push_data()
         return True
 
