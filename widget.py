@@ -252,6 +252,12 @@ class CapitalDashboard(Gtk.Window):
         return False
 
     def _raise_window(self):
+        # Open the display, raise, flush, and ALWAYS close it again.
+        # Previously XOpenDisplay() was never paired with XCloseDisplay(),
+        # leaking one X client connection per call (called every ~30s plus
+        # twice at startup) until the 256-client X server limit was hit.
+        d = None
+        X11 = None
         try:
             import ctypes
             X11 = ctypes.CDLL("libX11.so.6")
@@ -259,6 +265,7 @@ class CapitalDashboard(Gtk.Window):
             X11.XOpenDisplay.argtypes = [ctypes.c_char_p]
             X11.XRaiseWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
             X11.XFlush.argtypes = [ctypes.c_void_p]
+            X11.XCloseDisplay.argtypes = [ctypes.c_void_p]
             d = X11.XOpenDisplay(None)
             if d:
                 win = self.get_window()
@@ -267,6 +274,12 @@ class CapitalDashboard(Gtk.Window):
                     X11.XFlush(d)
         except Exception:
             pass
+        finally:
+            if d is not None and X11 is not None:
+                try:
+                    X11.XCloseDisplay(d)
+                except Exception:
+                    pass
         return False
 
     def _tick(self):
