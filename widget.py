@@ -10,7 +10,7 @@ is pushed to the page every REFRESH_SEC seconds.
 
 Date format: "Updated 1 minute ago (7 Nov, 22:01)"
 """
-import json, os, sys, warnings
+import json, os, sys, warnings, threading, subprocess
 warnings.filterwarnings("ignore")
 from datetime import datetime, timezone
 
@@ -76,6 +76,7 @@ HTML = r"""<!DOCTYPE html>
     <div class="shipped">Shipped <b id="shipped">0</b> <span id="shippedDelta" class="delta">0</span></div>
     <div class="traffic">farishan.com <b id="viewsFc">0</b> views <span id="deltaFc" class="delta">0</span></div>
     <div class="traffic">han.farishan.com <b id="viewsHan">0</b> views <span id="deltaHan" class="delta">0</span></div>
+    <div class="traffic">Gumroad <b id="viewsGm">0</b> views · <b id="salesGm">0</b> sales</div>
     <ul class="repos" id="repos"></ul>
     <div class="updated" id="updated">Updated …</div>
   </div>
@@ -105,6 +106,9 @@ HTML = r"""<!DOCTYPE html>
       document.getElementById('viewsHan').textContent = fmt(han.today_views || 0);
       setDelta('deltaFc', (fc.today_views||0)-(fc.yesterday_views||0));
       setDelta('deltaHan', (han.today_views||0)-(han.yesterday_views||0));
+      const g = d.gumroad || {};
+      document.getElementById('viewsGm').textContent = fmt(g.total_views || 0);
+      document.getElementById('salesGm').textContent = fmt(g.total_sales || 0);
       const repos = d.repos || [];
       const ul = document.getElementById('repos');
       ul.innerHTML = '';
@@ -159,6 +163,7 @@ def build_payload():
         "traffic": d.get("traffic", {}),
         "shipped": d.get("shipped", {}),
         "repos": d.get("repos", []),
+        "gumroad": d.get("gumroad", {}),
         "updated_text": format_updated(d),
     }
 
@@ -166,7 +171,7 @@ def build_payload():
 class CapitalDashboard(Gtk.Window):
     def __init__(self):
         super().__init__(title="Productivity Capital")
-        self.set_default_size(300, 290)
+        self.set_default_size(300, 320)
         self.set_position(Gtk.WindowPosition.CENTER)
 
         # transparency
@@ -298,6 +303,26 @@ class CapitalDashboard(Gtk.Window):
         self._push_data()
 
 
+SYNC_SCRIPT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sync_all.py")
+SYNC_INTERVAL = 300  # seconds
+
+
+def run_sync():
+    try:
+        subprocess.run([sys.executable, SYNC_SCRIPT],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                       timeout=180)
+    except Exception:
+        pass
+
+
+def sync_loop():
+    run_sync()
+    t = threading.Timer(SYNC_INTERVAL, sync_loop)
+    t.daemon = True
+    t.start()
+
+
 def main():
     os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
     if not os.path.exists(DATA_FILE):
@@ -310,6 +335,8 @@ def main():
                 "shipped": {"today": 0, "yesterday": 0},
                 "updated_at": datetime.now().isoformat(timespec="seconds"),
             }, f, indent=2)
+    # kick off background sync (daemon thread)
+    threading.Thread(target=sync_loop, daemon=True).start()
     w = CapitalDashboard()
     w.show_all()
     GLib.timeout_add(1000, lambda: (w._center(), False)[1])
